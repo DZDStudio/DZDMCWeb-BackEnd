@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "npx tsc && cd build/src && node app.js",
-    "build": "rm -rf build && npx tsc && cd build/src && node app.js"
+    "build": "npx tsc"
   },
   "author": "HaiPaya <haipaya@aliyun.com>",
   "bugs": "https://github.com/PayaHai/daling-backend/issues",
@@ -36,6 +36,7 @@
     "@types/jsonwebtoken": "^9.0.6",
     "@types/koa__cors": "^5.0.0",
     "@types/koa-bodyparser": "^4.3.12",
+    "@types/koa-router": "^7.4.8",
     "@types/koa-useragent": "^1.2.0",
     "@types/node": "^20.14.12",
     "@types/nodemailer": "^6.4.15",
