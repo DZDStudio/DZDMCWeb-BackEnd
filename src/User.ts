@@ -17,6 +17,7 @@ export type userData = {
     "mail": string
     "pwd": string
     "session": Array<Session>
+    "currentSession": string
     "permissions": Array<string>
     "money": [number, number]
 }
@@ -136,10 +137,55 @@ export class User {
                     resolve(null)
                     return
                 }
+
+                user.currentSession = session.sessionId
             
                 resolve(user)
             }).catch(err => {
                 reject(err)
+            })
+        })
+    }
+
+    // 下线设备
+    public static async offline (userUuid : string, sessionId : string) {
+        return new Promise<void>((resolve, reject) => {
+            // 获取用户数据
+            MongoDB.get("users", {
+                uuid: userUuid
+            }).then((res : Array<userData>) => {
+                // 不存在
+                if (res.length == 0) {
+                    reject("用户不存在")
+                    return
+                }
+
+                let user = res[0]
+
+                // 获取 session 信息
+                let session : Session = user.session.find((session : Session) => {
+                    return session.sessionId == sessionId
+                })
+
+                //不存在
+                if (session == undefined) {
+                    reject("会话不存在")
+                    return
+                }
+
+                MongoDB.upData("users", {
+                    uuid: userUuid
+                }, {
+                    $pull: {
+                        session: {
+                            sessionId: sessionId
+                        }
+                    }
+                }).then(() => {
+                    resolve()
+                }).catch(err => {
+                    reject("数据库错误")
+                })
             })
         })
     }

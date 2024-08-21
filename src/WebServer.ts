@@ -18,6 +18,7 @@ const _conf : Config = new Config("WebServer")
 const _port : number = _conf.init("port", 1823, () => logger.warn("初始化 port 配置：1823"))
 const _host : string = _conf.init("host", "0.0.0.0", () => logger.warn("初始化 host 配置：0.0.0.0"))
 const _useProxy : boolean = _conf.init("useProxy", false, () => logger.warn("初始化 useProxy 配置：false"))
+const _useTLS : boolean = _conf.init("useTLS", true, () => logger.warn("初始化 useTLS 配置：true"))
 const _cors : cors.Options = _conf.init("cors", {
     origin: '*', // 允许所有域名跨域访问
     allowMethods: "*", // 允许的 HTTP 请求方法
@@ -73,15 +74,18 @@ export default class WebServer {
         })
 
         Event.listen("system.start", () => {
-            // 启动
-            // 读取 SSL 证书和密钥文件
-            const options = {
-                key: fs.readFileSync("../ssl/key"),
-                cert: fs.readFileSync('../ssl/cert')
-            }
-            
             // 创建 HTTPS 服务器
-            https.createServer(options, this._app.callback()).listen(_port, _host)
+            if (_useTLS) {
+                // 读取 SSL 证书和密钥文件
+                const options = {
+                    key: fs.readFileSync("../ssl/key"),
+                    cert: fs.readFileSync('../ssl/cert')
+                }
+                
+                https.createServer(options, this._app.callback()).listen(_port, _host)
+            } else {
+                this._app.listen(_port, _host)
+            }
             logger.info(`Web服务器已绑定端口：${_port}`)
         })
     }

@@ -56,30 +56,12 @@ export default async (router : any) => {
         // 获取 post 参数
         let mail = ctx.request.body.mail
         let pwd = Utils.getHash(ctx.request.body.pwd)
-        let CFToken = ctx.request.body.CFToken
 
         // 缺少参数
-        if (!mail || !pwd || !CFToken) {
+        if (!mail || !pwd) {
             ctx.body = {
                 code: 400,
                 msg: "缺少参数。"
-            }
-            return
-        }
-
-        // 人机验证
-        let robotVerifyRes = await CloudflareTurnstile.robotVerify(CFToken, ctx.ip).catch(err => {
-            logger.error("人机验证时出错：" + err)
-            ctx.body = {
-                code: 400,
-                msg: "连接人机验证服务失败！"
-            }
-            return
-        })
-        if (!robotVerifyRes.success) {
-            ctx.body = {
-                code: 400,
-                msg: "人机验证失败。"
             }
             return
         }
