@@ -2,7 +2,7 @@ import MongoDB from "../MongoDB.js"
 import Logger from "../Logger.js"
 import Utils from "../Utils.js"
 import { LLOneBot } from "../LLOneBot.js"
-import { User , userData , sessionData } from "../User.js"
+import { User , userData , Session } from "../User.js"
 
 const logger : Logger = new Logger("User")
 
@@ -34,6 +34,47 @@ export default async (router : any) => {
             data: user
         }
         return
+    })
+
+    // 下线设备
+    router.post("/user/offline", async (ctx : any) => {
+        let token : string = ctx.request.body.token
+        let sessionId : string = ctx.request.body.sessionId
+        if (!token || !sessionId) {
+            ctx.body = {
+                code: 400,
+                msg: "缺少参数。"
+            }
+            return
+        }
+
+        // 验证 token
+        let user : userData = await User.verifyToken(token)
+        if (user == null) {
+            ctx.body = {
+                code: 401,
+                msg: "身份验证失败。"
+            }
+            return
+        }
+
+        // 为当前设备
+        let isCurrentDevice = sessionId == user.currentSession
+
+        await User.offline(user.uuid, sessionId).then(() => {
+            ctx.body = {
+                code: 200,
+                msg: "成功。",
+                data: {
+                    isCurrentDevice
+                }
+            }
+        }).catch((err) => {
+            ctx.body = {
+                code: 500,
+                msg: err
+            }
+        })
     })
 
     // 设置用户名
