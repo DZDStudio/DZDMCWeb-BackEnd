@@ -5,16 +5,15 @@ import WebServer from "./WebServer.js"
 import fs from "fs"
 
 async function main() {
-    console.log(`Daling 后端开始加载...`)
+    console.log(`DZDMCWeb 后端开始加载...`)
 
     const logger : Logger = new Logger("Main")
 
     logger.info(`正在加载事件管理器...`)
-    const en : Event = new Event()
-    en.create("system.start")
+    Event.create("system.start")
 
     logger.info(`正在加载 MongoDB 数据库...`)
-    const MongoDB_DB : MongoDB = new MongoDB()
+    new MongoDB()
 
     logger.info(`正在加载数Web服务器...`)
     const _WebServer : WebServer = new WebServer()
@@ -31,15 +30,16 @@ async function main() {
 
     // 添加路由
     let router = _WebServer.getRouter()
-    routerFiles.forEach(async routerFile => {
+    for (let i = 0; i < routerFiles.length; i++) {
+        let routerFile = routerFiles[i]
         const router_module = await import("./router/" + routerFile)
-        router_module.default(router, en, MongoDB_DB)
+        router_module.default(router)
         logger.info(`加载路由：${routerFile}`)
-    })
+    }
 
-    en.trigger("system.start")
+    Event.trigger("system.start")
 
-    logger.info(`Daling 后端加载完成！`)
+    logger.info(`DZDMCWeb 后端加载完成！`)
 }
 
 await main().catch(err => {

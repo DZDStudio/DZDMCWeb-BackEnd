@@ -57,7 +57,7 @@ export default class Config {
      * @param callback 配置不存在变更回调
      * @returns 配置值
      */
-    public init (key : string, value : any, callback : Function = () => {}) : any {
+    public init<T> (key : string, value : T, callback : Function = () => {}) : T {
         if ( !this._config.has(key) ) {
             this._config.set(key, value)
             this._save()

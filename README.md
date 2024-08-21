@@ -1,2 +1,2 @@
-# daling-backend
-> Daling 动漫站后端
+# DZDMCWeb-BackEnd
+> DZD Minecraft Java 服务器官网后端

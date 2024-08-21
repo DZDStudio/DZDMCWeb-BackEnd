@@ -1,5 +1,5 @@
 // 事件管理器
-const _eventList : Map<string, Function[]> = new Map()
+const _eventList : Map<string, Array<(...args: any[]) => void>> = new Map()
 
 /**
  * 事件管理器
@@ -9,7 +9,7 @@ export default class Event {
      * 创建事件
      * @param name 事件名称
      */
-    public create (name : string) : void {
+    public static create<T extends any[]>(name : string) : void {
         if ( !_eventList.has(name) ) {
             _eventList.set(name, [])
         }
@@ -20,7 +20,7 @@ export default class Event {
      * @param name 事件名称
      * @param args 参数
      */
-    public trigger (name : string, ...args : any[]) : void {
+    public static trigger<T extends any[]>(name : string, ...args : T) : void {
         if ( _eventList.has(name) ) {
             _eventList.get(name).forEach(func => {
                 func(...args)
@@ -33,7 +33,7 @@ export default class Event {
      * @param name 事件名称
      * @param func 回调函数
      */
-    public listen (name : string, func : Function) : void {
+    public static listen<T extends any[]>(name : string, func : (...args: T) => void) : void {
         if ( _eventList.has(name) ) {
             _eventList.get(name).push(func)
         }

@@ -2,6 +2,9 @@ import Koa from "koa"
 import cors from "@koa/cors"
 import Router from "koa-router"
 import bodyParser from "koa-bodyparser"
+import { userAgent } from "koa-useragent"
+import https from "https"
+import fs from "fs"
 
 import Event from "./Event.js"
 import Logger from "./Logger.js"
@@ -44,17 +47,20 @@ export default class WebServer {
         // Post参数获取
         this._app.use(bodyParser())
 
-        // 路由
-        this._app.use(this._router.routes())
+        // 用户代理
+        this._app.use(userAgent)
 
         // 监听所有请求
         this._app.use(async (ctx : any, next : Function) => {
-            ctx.set("Content-Type", "application/json")
+            ctx.set("Content-Type", "application/json; charset=utf-8")
 
             logger.info(`${ctx.ip} ${ctx.method} ${ctx.url}`)
 
             await next()
         })
+
+        // 路由
+        this._app.use(this._router.routes())
 
         // 404
         this._app.use(async (ctx : any, next : Function) => {
@@ -66,9 +72,16 @@ export default class WebServer {
             await next()
         })
 
-        en.listen("system.start", () => {
+        Event.listen("system.start", () => {
             // 启动
-            this._app.listen(_port, _host)
+            // 读取 SSL 证书和密钥文件
+            const options = {
+                key: fs.readFileSync("../ssl/key"),
+                cert: fs.readFileSync('../ssl/cert')
+            }
+            
+            // 创建 HTTPS 服务器
+            https.createServer(options, this._app.callback()).listen(_port, _host)
             logger.info(`Web服务器已绑定端口：${_port}`)
         })
     }

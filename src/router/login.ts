@@ -1,77 +1,65 @@
-import axios from "axios"
-import crypto from "crypto"
-
-import Event from "../Event.js"
+import Utils from "../Utils.js"
 import MongoDB from "../MongoDB.js"
 import Logger from "../Logger.js"
-import Config from "../Config.js"
+import CloudflareTurnstile from "../CloudflareTurnstile.js"
+import { User , userData , sessionData } from "../User.js"
 
 const logger : Logger = new Logger("Register")
-const RegisterConf : Config = new Config("Register")
 
-let CFToken_Key = RegisterConf.init("CFToken_Key", "***", () => logger.warn("初始化 CFToken_Key 配置：***"))
-let useIP = RegisterConf.init("useIP", false, () => logger.warn("初始化 useIP 配置：false"))
+export default async (router : any) => {
+    // 验证登录状态
+    router.post("/login/verify", async (ctx : any) => {
+        let token = ctx.request.body.token
 
-/**
- * 生成哈西 512 字符串
- * @param data 数据
- * @returns 哈西 512 字符串
- */
-function getHash (data : string) : string {
-    const hash = crypto.createHash("sha512")
-    hash.update(data)
-    return hash.digest('hex')
-}
-
-/**
- * 人机验证
- * @param CFToken CloudflareToken
- * @param ip IP
- */
-function robotVerify (CFToken : string, ip : string) : Promise<any> {
-    return new Promise(async (resolve, reject) => {
-        try {
-            let data = {
-                secret: CFToken_Key,
-                response: CFToken,
-                remoteip: ip
+        if (!token) {
+            ctx.body = {
+                code: 400,
+                msg: "未登录",
+                data: {
+                    isLogin: false
+                }
             }
-            if (!useIP) {
-                delete data.remoteip
-            }
-            
-            const response = await axios.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', data)
-        
-            const { success, score, error_codes } = response.data
-        
-            if (success) {
-                resolve({
-                    success: success,
-                    score: score,
-                    error_codes: error_codes
-                })
-            } else {
-                resolve({
-                    success: success,
-                    score: score,
-                    error_codes: error_codes
-                })
-            }
-        } catch (err) {
-            reject(err)
+            return
         }
-    })
-}
 
-export default async (router : any, en : Event, MongoDB_DB : MongoDB) => {
+        await User.verifyToken(token).then(async (data) => {
+            if(data == null) {
+                ctx.body = {
+                    code:  200,
+                    msg: "未登录",
+                    data: {
+                        isLogin: false
+                    }
+                }
+            } else {
+                ctx.body = {
+                    code:  200,
+                    msg: "已登录",
+                    data: {
+                        isLogin: true
+                    }
+                }
+            }
+            return
+        }).catch((err) => {
+            logger.error(`获取用户登录状态时出现错误:${err}`)
+            ctx.body = {
+                code: 500,
+                msg: err
+            }
+            return
+        })
+    })
+
+    // 登录
     router.post("/login", async (ctx : any) => {
         // 获取 post 参数
         let mail = ctx.request.body.mail
-        let pwd = getHash(ctx.request.body.pwd)
+        let pwd = Utils.getHash(ctx.request.body.pwd)
         let CFToken = ctx.request.body.CFToken
 
         // 缺少参数
-        if ( !mail || !pwd ) {
+        if (!mail || !pwd || !CFToken) {
             ctx.body = {
                 code: 400,
                 msg: "缺少参数。"
@@ -80,7 +68,7 @@ export default async (router : any, en : Event, MongoDB_DB : MongoDB) => {
         }
 
         // 人机验证
-        let robotVerifyRes = await robotVerify(CFToken, ctx.ip).catch(err => {
+        let robotVerifyRes = await CloudflareTurnstile.robotVerify(CFToken, ctx.ip).catch(err => {
             logger.error("人机验证时出错：" + err)
             ctx.body = {
                 code: 400,
@@ -97,16 +85,44 @@ export default async (router : any, en : Event, MongoDB_DB : MongoDB) => {
         }
 
         // 验证
-        await MongoDB_DB.get("users", { mail , pwd }).then((result : Array<Object>) => {
-            if ( result.length > 0 ) {
-                ctx.body = {
-                    code: 200,
-                    msg: "登录成功。"
-                }
-            } else {
+        await MongoDB.get("users", {
+            mail: mail,
+            pwd: pwd
+        }).then(async (res : Array<userData>) => {
+            // 没有
+            if (res.length == 0) {
                 ctx.body = {
                     code: 400,
                     msg: "邮箱或密码错误。"
+                }
+                return
+            }
+
+            let user : userData = res[0]
+            let sessionData : sessionData = {
+                ip: ctx.ip,
+                source: ctx.userAgent.source,
+                version: ctx.userAgent.version,
+                browser: ctx.userAgent.browser,
+                os: ctx.userAgent.os,
+                platform: ctx.userAgent.platform
+            }
+
+            // 获取 token
+            let token = await User.getToken(user.uuid, sessionData).catch(err => {
+                logger.error("获取 token 时出错：" + err)
+                ctx.body = {
+                    code: 400,
+                    msg: "获取 token 时出错！"
+                }
+                return
+            })
+
+            ctx.body = {
+                code: 200,
+                msg: "登录成功。",
+                data: {
+                    token: token
                 }
             }
         }).catch(err => {
@@ -116,5 +132,6 @@ export default async (router : any, en : Event, MongoDB_DB : MongoDB) => {
                 msg: "数据库错误!"
             }
         })
+        return
     })
 }

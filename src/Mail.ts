@@ -14,61 +14,94 @@ const _secure : boolean = conf.init("secure", true, () => logger.warn("初始化
 const _user : string = conf.init("user", "notify@daling.ac.cn", () => logger.warn("初始化 user 配置：notify@daling.ac.cn"))
 const _pass : string = conf.init("pass", "***", () => logger.warn("初始化 pass 配置：***"))
 
+// 缓存 HTML 模板
+const _cache : Map<string, string> = new Map()
+try {
+    // 同步读取
+    let templateFiles = fs.readdirSync("../template")
+
+    for (let file of templateFiles) {
+        // 读取文件
+        let data = fs.readFileSync(`../template/${file}`, "utf8")
+
+        // 缓存
+        _cache.set(file.split(".")[0], data)
+        logger.debug(`读取模板文件：${file.split(".")[0]}`)
+    }
+} catch (err) {
+    logger.fatal(`读取模板文件时出现错误:${err}`)
+}
+
+// 创建邮件发送器
+const _transporter : nodemailer.Transporter = nodemailer.createTransport({
+    host: _host,
+    port: _port,
+    secure: _secure,
+    auth: {
+        user: _user,
+        pass: _pass
+    }
+})
+
 export default class Mail {
-    protected _transporter : nodemailer.Transporter
-    protected _cache : Map<string, string> = new Map()
-
     /**
-     * 创建邮件发送器
+     * 发送验证码
+     * @param to 接收者
+     * @param userName 用户名
+     * @param operate 操作
+     * @return Promise<void>
      */
-    public constructor () {
-        // 缓存 HTML 模板
-        try {
-            // 同步读取
-            let templateFiles = fs.readdirSync("../../template")
-        
-            for (let file of templateFiles) {
-                // 读取文件
-                let data = fs.readFileSync(`../../template/${file}`, "utf8")
-        
-                // 缓存
-                this._cache.set(file.split(".")[0], data)
-                logger.debug(`读取模板文件：${file.split(".")[0]}`)
-            }
-        } catch (err) {
-            logger.fatal(`读取模板文件时出现错误:${err}`)
-        }
+    public static async sendVerificationCode (to : string, userName : string, operate : string, code : string) : Promise<void> {
+        return new Promise((resolve, reject) => {
+            // 读取模板
+            let html = _cache.get("VerificationCode")
 
-        // 创建邮件发送器
-        this._transporter = nodemailer.createTransport({
-            host: _host,
-            port: _port,
-            secure: _secure,
-            auth: {
-                user: _user,
-                pass: _pass
-            }
+            // 替换模板
+            html = html.replace(/{{name}}/g, userName)
+            html = html.replace(/{{operate}}/g, operate)
+            html = html.replace(/{{code}}/g, code)
+
+            // 发送邮件
+            _transporter.sendMail({
+                from: `DalingAC 动漫 - 验证码<${_user}>`,
+                to: to,
+                subject: "DalingAC 动漫 - 验证码",
+                html: html
+            }).then(() => {
+                logger.debug(`发送验证码邮件成功：${to}`)
+                resolve()
+            }).catch(err => {
+                logger.fatal(`发送验证码邮件失败：${to}，错误信息：${err}`)
+                reject()
+            })
         })
     }
 
     /**
-     * 发送验证码
+     * 发送通知
+     * @param to 接收者
+     * @param userName 用户名
+     * @param title 标题
+     * @param content 内容
+     * @return Promise<void>
      */
-    public async sendVerificationCode (to : string, userName : string, operate : string, code : string) : Promise<void> {
-        // 读取模板
-        let html = this._cache.get("VerificationCode")
+    public static async sendNotify (to : string, userName : string, title : string, content : string) : Promise<void> {
+        return new Promise((resolve, reject) => {
+            // 读取模板
+            let html = _cache.get("Notify")
 
-        // 替换模板
-        html = html.replace(/{{name}}/g, userName)
-        html = html.replace(/{{operate}}/g, operate)
-        html = html.replace(/{{code}}/g, code)
+            // 替换模板
+            html = html.replace(/{{name}}/g, userName)
+            html = html.replace(/{{title}}/g, title)
+            html = html.replace(/{{content}}/g, content)
 
-        // 发送邮件
-        await this._transporter.sendMail({
-            from: `DalingAC 动漫 - 验证码<${_user}>`,
-            to: to,
-            subject: "DalingAC 动漫 - 验证码",
-            html: html
+            // 发送邮件
+            _transporter.sendMail({
+                from: `DalingAC 动漫 - ${title}<${_user}>`,
+                to: to,
+                subject: `DalingAC 动漫 - ${title}`,
+                html: html
+            })
         })
     }
 }
