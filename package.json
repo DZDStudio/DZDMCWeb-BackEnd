@@ -1,6 +1,6 @@
 {
   "name": "dzd-mc-web-backend",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Daling 后端",
   "main": "src/app.ts",
   "type": "module",

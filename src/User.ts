@@ -189,4 +189,30 @@ export class User {
             })
         })
     }
+
+    // 下线所有设备
+    public static async offlineAll (userUuid : string) {
+        return new Promise<void>((resolve, reject) => {
+            // 获取用户数据
+            MongoDB.get("users", {
+                uuid: userUuid
+            }).then((res : Array<userData>) => {
+                // 不存在
+                if (res.length == 0) {
+                    reject("用户不存在")
+                    return
+                }
+
+                MongoDB.upData("users", {
+                    uuid: userUuid
+                }, {
+                    $set: {
+                        session: []
+                    }
+                }).then(() => {
+                   resolve()
+                })
+            })
+        })
+    }
 }

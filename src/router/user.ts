@@ -313,4 +313,49 @@ export default async (router : any) => {
             }
         })
     })
+
+    // 更新密码
+    router.post("/user/pwd", async (ctx : any) => {
+        let pwd : string = Utils.getHash(ctx.request.body.pwd)
+        let token : string = ctx.request.body.token
+        if (!pwd || !token) {
+            ctx.body = {
+                code: 400,
+                msg: "缺少参数。"
+            }
+            return
+        }
+
+        // 验证 token
+        let user : userData = await User.verifyToken(token)
+        if (user == null) {
+            ctx.body = {
+                code: 401,
+                msg: "身份验证失败。"
+            }
+            return
+        }
+
+        // 更新
+        await MongoDB.upData("users", {
+            "uuid": user.uuid
+        }, {
+            $set:{
+                "pwd": pwd
+            }
+        }).then(async () => {
+            // 下线所有设备
+            await User.offlineAll(user.uuid)
+
+            ctx.body = {
+                code: 200,
+                msg: "修改成功。"
+            }
+        }).catch(() => {
+            ctx.body = {
+                code: 500,
+                msg: "数据库错误。"
+            }
+        })
+    })
 }

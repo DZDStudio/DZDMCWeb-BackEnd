@@ -9,7 +9,6 @@ export default class Utils {
      */
     public static generateMinecraftJEUUID() {
         // 生成并转换 UUID 格式以符合 Minecraft JE 标准
-        // Minecraft JE UUID 格式为 xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
         const formattedUUID = uuid.v4().replace(/(\w{8})(\w{4})(\w{4})(\w{4})(\w{12})/, "$1-$2-$3-$4-$5")
         
         return formattedUUID
@@ -21,6 +20,8 @@ export default class Utils {
      * @returns 哈西 512 字符串
      */
     public static getHash (data : string) : string {
+        if (data == null) return null
+
         const hash = crypto.createHash("sha512")
         hash.update(data)
         return hash.digest('hex')
