@@ -63,9 +63,9 @@ export default class Mail {
 
             // 发送邮件
             _transporter.sendMail({
-                from: `DalingAC 动漫 - 验证码<${_user}>`,
+                from: `DZD Minecraft 运维团队<${_user}>`,
                 to: to,
-                subject: "DalingAC 动漫 - 验证码",
+                subject: "DZD Minecraft 运维团队 - 验证码",
                 html: html
             }).then(() => {
                 logger.debug(`发送验证码邮件成功：${to}`)
@@ -97,9 +97,9 @@ export default class Mail {
 
             // 发送邮件
             _transporter.sendMail({
-                from: `DalingAC 动漫 - ${title}<${_user}>`,
+                from: `DZD Minecraft 运维团队<${_user}>`,
                 to: to,
-                subject: `DalingAC 动漫 - ${title}`,
+                subject: `DZD Minecraft 运维团队 - ${title}`,
                 html: html
             })
         })
